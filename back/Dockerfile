@@ -2,7 +2,7 @@
 FROM gradle:8.7-jdk17-alpine AS build
 WORKDIR /src
 COPY . .
-RUN ./gradlew build -x test --no-daemon
+RUN chmod +x gradlew && ./gradlew build -x test --no-daemon
 
 # Stage 2: minimal runtime image
 FROM eclipse-temurin:17-jre-alpine

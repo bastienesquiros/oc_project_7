@@ -10,6 +10,7 @@ module.exports = function (config) {
       require("karma-chrome-launcher"),
       require("karma-jasmine-html-reporter"),
       require("karma-coverage"),
+      require("karma-junit-reporter"),
       require("@angular-devkit/build-angular/plugins/karma"),
     ],
     client: {
@@ -28,6 +29,11 @@ module.exports = function (config) {
       dir: require("path").join(__dirname, "./coverage/microcrm"),
       subdir: ".",
       reporters: [{ type: "html" }, { type: "text-summary" }, { type: "lcov" }],
+    },
+    junitReporter: {
+      outputDir: "test-results",
+      outputFile: "results.xml",
+      useBrowserName: false,
     },
     reporters: ["progress", "kjhtml"],
     browsers: ["ChromeHeadlessNoSandbox", "ChromeHeadless", "Chrome"],

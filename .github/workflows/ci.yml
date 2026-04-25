@@ -13,6 +13,9 @@ jobs:
   back-ci:
     name: Back-end – Build, Test & Analyze
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
     defaults:
       run:
         working-directory: back
@@ -43,6 +46,14 @@ jobs:
       - name: Build & Test
         run: ./gradlew build
 
+      - name: Publish back-end test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: JUnit Tests – Back-end
+          path: back/build/test-results/test/*.xml
+          reporter: java-junit
+
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -62,6 +73,9 @@ jobs:
   front-ci:
     name: Front-end – Build, Test & Analyze
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
     defaults:
       run:
         working-directory: front
@@ -83,6 +97,14 @@ jobs:
 
       - name: Run tests with coverage
         run: npm run test:ci
+
+      - name: Publish front-end test report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Karma Tests – Front-end
+          path: front/test-results/*.xml
+          reporter: java-junit
 
       - name: SonarCloud analysis
         uses: SonarSource/sonarqube-scan-action@v6
