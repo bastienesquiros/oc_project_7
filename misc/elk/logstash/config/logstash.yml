@@ -1,0 +1,3 @@
+# Logstash settings – pointe vers Elasticsearch interne
+http.host: "0.0.0.0"
+xpack.monitoring.enabled: false

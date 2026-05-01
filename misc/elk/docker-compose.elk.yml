@@ -1,0 +1,96 @@
+services:
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Elasticsearch – moteur de stockage et de recherche
+  # ──────────────────────────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Logstash – collecte et transformation des logs
+  # ──────────────────────────────────────────────────────────────────────────
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.4
+    container_name: logstash
+    volumes:
+      - ./misc/elk/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./misc/elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    ports:
+      - "5044:5044"
+      - "5000:5000"
+      - "9600:9600"
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Kibana – interface de visualisation
+  # ──────────────────────────────────────────────────────────────────────────
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:5601/api/status | grep -q '\"level\":\"available\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Back-end Spring Boot – envoie ses logs à Logstash via profil "elk"
+  # ──────────────────────────────────────────────────────────────────────────
+  back:
+    build:
+      context: ../../back
+      dockerfile: ../../back/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=elk
+      - LOGSTASH_HOST=logstash
+      - LOGSTASH_PORT=5000
+    depends_on:
+      - logstash
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Front-end Angular / Caddy
+  # ──────────────────────────────────────────────────────────────────────────
+  front:
+    build:
+      context: ../..
+      dockerfile: ../../front/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - back
+    restart: unless-stopped
+
+volumes:
+  es-data:
+    driver: local
